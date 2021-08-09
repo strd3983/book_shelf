@@ -1,7 +1,7 @@
 import os
 import requests
 import configparser
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as bs4
 
 # import pandas as pd
 
@@ -13,6 +13,7 @@ def main():
     url = config()
     if url == 0:
         return
+    book_info(url)
 
 
 # --------------------------------------------------
@@ -29,15 +30,8 @@ def config():
             # iniの値取得
             read_default = config_ini['DEFAULT']
             url = read_default.get('URL', raw=True)
+            url = 'https://www.amazon.co.jp/gp/product/' + url
             # 設定出力
-            info = book_info(url)
-            print('#########################################')
-            for i in range(len(info)):
-                if info[i][0] == 'タイトル':
-                    print('書籍名:', info[i][1])
-                if info[i][0] == '著者':
-                    print('著者名:', info[i][1])
-            print('#########################################')
             return url
     else:
         print('setting.iniが見つかりません\n')
@@ -48,16 +42,23 @@ def config():
 # 書籍情報の取得
 # --------------------------------------------------
 def book_info(url):
-    page = requests.get(url)
-    soup = BeautifulSoup(page.text, "html.parser")
-    title = soup.select_one('#collection-title')
-    print(title)
-    info = []
-    info.append(['タイトル', title])
-    return info
+    headers = {
+        "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36"
+    }
+    page = requests.get(url, headers=headers)
+    soup = bs4(page.text, "html.parser")
+    title = soup.find('title').get_text(strip=True).replace('Kindle版', '')
+    author = soup.find('span', {'id': 'author-name'}).get_text(strip=True)
+    print('#########################################')
+    print('書籍名:', title)
+    print('著者名:', author)
+    print('URL:', url)
+    print('#########################################')
+    return
 
 
 if __name__ == "__main__":
     main()
-    print('終了しました')
-    os.system('PAUSE')
+    # print('終了しました')
+    # os.system('PAUSE')
