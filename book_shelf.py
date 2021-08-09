@@ -13,20 +13,6 @@ def main():
     url = config()
     if url == 0:
         return
-    page = requests.get(url)
-    soup = BeautifulSoup(page.text, "html.parser")
-    table = soup.find('table', {'class': 'wikitable'}).tbody
-    rows = table.find_all('tr')
-    columns = [v.text.replace('\n', '') for v in rows[0].find_all('th')]
-    for i in range(len(rows)):
-        # 全ての<td>タグ（セルデータ）を取得しtdsに格納、リスト化
-        tds = rows[i].find_all('td')
-        if len(tds) == len(columns):
-            # （ある行成分の）全セルデータをテキスト成分としてvaluesに格納、リスト化
-            values = [
-                td.text.replace('\n', '').replace('\xa0', ' ') for td in tds
-            ]
-            print(values)
 
 
 # --------------------------------------------------
@@ -64,24 +50,10 @@ def config():
 def book_info(url):
     page = requests.get(url)
     soup = BeautifulSoup(page.text, "html.parser")
-    # title = soup.select_one('#firstHeading').getText()
-    table = soup.find('table', {'class': 'infobox bordered'}).tbody
-    rows = table.find_all('tr')
+    title = soup.select_one('#collection-title')
+    print(title)
     info = []
-    info.append(['タイトル', rows[0].getText().replace('\n', '')])
-    for i in range(len(rows)):
-        ths = rows[i].find_all('th')
-        if len(ths) == 1:
-            index = [
-                th.text.replace('\n', '').replace('\xa0', ' ') for th in ths
-            ]
-            tds = rows[i].find_all('td')
-            if len(tds) == 1:
-                data = [
-                    td.text.replace('\n', '').replace('\xa0', ' ')
-                    for td in tds
-                ]
-                info.append(index + data)
+    info.append(['タイトル', title])
     return info
 
 
