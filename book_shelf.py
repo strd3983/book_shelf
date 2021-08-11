@@ -18,7 +18,9 @@ def main():
     if urls == 0:
         return
     for i in range(len(urls)):
-        book_info(urls[i], rnums[i])
+        # URLが不確かなものは除外
+        if len(str(urls[i])) == 51 + 10:
+            book_info(urls[i], rnums[i])
 
 
 # --------------------------------------------------
@@ -27,8 +29,8 @@ def main():
 def config():
     config_ini = configparser.ConfigParser(interpolation=None)
     config_ini_path = 'setting.ini'
-    urls = []
-    rnums = []
+    urls = []  # URLの集合
+    rnums = []  # 既読数の集合
     # iniファイルが存在するかチェック
     if os.path.exists(config_ini_path):
         # iniファイルが存在する場合、ファイルを読み込む
@@ -36,14 +38,20 @@ def config():
             config_ini.read_file(fp)
             # iniの値取得
             for i in range(int(config_ini['DEFAULT']['number'])):
-                url = config_ini[str(i + 1)]['URL']
-                urls.extend([
-                    'https://www.amazon.co.jp/gp/product/' + url +
-                    '?language=ja_JP'
-                ])
-                rnum = config_ini[str(i + 1)]['Read']
+                url, rnum = 0, 0  # 読み取り不可時のために0で初期化
+                try:
+                    url = config_ini[str(i + 1)]['URL']
+                    url = 'https://www.amazon.co.jp/gp/product/' + url + '?language=ja_JP'
+                except Exception:
+                    print('[' + str(i + 1) + ']', "のURLが不明です")
+
+                try:
+                    rnum = config_ini[str(i + 1)]['Read']
+                except Exception:
+                    print('[' + str(i + 1) + ']', 'の既読数が不明です')
+                urls.extend([url])
                 rnums.extend([rnum])
-            # 設定出力
+            print()
             return urls, rnums
     else:
         print('setting.iniが見つかりません\n')
@@ -70,7 +78,7 @@ def book_info(url, rnum):
     print('\n#############################################################')
     print('シリーズ名:', title)
     print('著者名:', author)
-    print('URL:', url)
+    print('URL:', url.replace('?language=ja_JP', ''))
     print()
 
     # 既刊情報の取得
@@ -107,7 +115,10 @@ def get_html(url):
     driver.get(url)
     driver.set_window_size(100, 200)
     try:
+        i = 0
         while True:
+            i += 1
+            print(i, "頁目取得")
             elems = driver.find_elements(
                 By.XPATH,
                 '//a[@class="a-link-normal" and @href="javascript:"]')
@@ -136,10 +147,8 @@ def get_html(url):
 def resource_path(relative_path):
     try:  # exeで実行時のパス
         base_path = sys._MEIPASS
-        base_path = os.path.dirname(sys.executable)
     except Exception:  # ソースで実行した場合エラー発生
         base_path = os.path.dirname(__file__)
-    print(os.path.join(base_path, relative_path))
     return os.path.join(base_path, relative_path)
 
 
