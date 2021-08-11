@@ -1,1 +1,1 @@
-pyinstaller .\book_shelf.py --onefile --noconsole --add-binary ".\bin\chromedriver.exe;.\driver" --add-binary ".\browser;.\browser"
+pyinstaller.exe .\book_shelf.py --onefile --add-binary ".\bin\chromedriver.exe;.\bin" --add-binary ".\browser;.\browser"
