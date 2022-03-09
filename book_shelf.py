@@ -28,7 +28,7 @@ def main():
 # --------------------------------------------------
 def config():
     config_ini = configparser.ConfigParser(interpolation=None)
-    config_ini_path = 'setting.ini'
+    config_ini_path = rel2abs_path('setting.ini', 'exe')
     urls = []  # URLの集合
     rnums = []  # 既読数の集合
     # iniファイルが存在するかチェック
@@ -41,20 +41,20 @@ def config():
                 url, rnum = 0, 0  # 読み取り不可時のために0で初期化
                 try:
                     url = config_ini[str(i + 1)]['URL']
-                    url = 'https://www.amazon.co.jp/gp/product/' + url + '?language=ja_JP'
+                    url = f'https://www.amazon.co.jp/gp/product/{url}?language=ja_JP'
                 except Exception:
-                    print('[' + str(i + 1) + ']', "のURLが不明です")
+                    print(f'W: [{str(i + 1)}]のURLが不明です')
 
                 try:
                     rnum = config_ini[str(i + 1)]['Read']
                 except Exception:
-                    print('[' + str(i + 1) + ']', 'の既読数が不明です')
+                    print(f'W: [{str(i + 1)}]の既読数が不明です')
                 urls.extend([url])
                 rnums.extend([rnum])
             print()
             return urls, rnums
     else:
-        print('setting.iniが見つかりません\n')
+        print('E: setting.iniが見つかりません')
         return 0, 0
 
 
@@ -65,7 +65,7 @@ def book_info(url, rnum):
     try:
         page = get_html(url)
     except Exception as e:
-        print('get_htmlでエラー')
+        print('E: get_htmlでエラー')
         print(e)
         page = 0
     if page == 0:
@@ -76,19 +76,18 @@ def book_info(url, rnum):
     title = soup.find('title').get_text(strip=True).replace('Kindle版', '')
     author = soup.find('span', {'id': 'author-name'}).get_text(strip=True)
     print('\n#############################################################')
-    print('シリーズ名:', title)
-    print('著者名:', author)
+    print(f'シリーズ名: {title}')
+    print(f'著者名: {author}')
     print('URL:', url.replace('?language=ja_JP', ''))
     print()
 
     # 既刊情報の取得
     titles = soup.find_all(
-        'a',
-        {'class': 'a-size-base-plus a-link-normal itemBookTitle a-text-bold'})
+        'a', {'class': 'a-size-base-plus a-link-normal itemBookTitle a-text-bold'})
     for i in range(len(titles)):
         if i == int(rnum):
             print('---------------------------以下未読---------------------------')
-        print(i + 1, ':', titles[i].get_text(strip=True))
+        print(f'{i + 1} : {titles[i].get_text(strip=True)}')
     print('#############################################################\n')
     return
 
@@ -98,8 +97,8 @@ def book_info(url, rnum):
 # --------------------------------------------------
 def get_html(url):
     # パスの設定
-    browser_path = resource_path(r'browser\chrome.exe')
-    driver_path = resource_path(r'bin\chromedriver.exe')
+    browser_path = rel2abs_path(r'.\data\browser\chrome.exe', 'exe')
+    driver_path = rel2abs_path(r'.\data\bin\chromedriver.exe', 'exe')
 
     # WebDriver のオプションを設定する
     options = webdriver.ChromeOptions()
@@ -118,38 +117,38 @@ def get_html(url):
         i = 0
         while True:
             i += 1
-            print(i, "頁目取得")
-            elems = driver.find_elements(
-                By.XPATH,
-                '//a[@class="a-link-normal" and @href="javascript:"]')
+            print(f'M: {i}頁目取得')
+            find_tag = '//a[@class="a-link-normal" and @href="javascript:"]'
+            elems = driver.find_elements(By.XPATH, find_tag)
             if elems == [] or elems[0].text != '続きを表示':
                 break
             # show_all = elems[1]
-            driver.execute_script("arguments[0].scrollIntoView();", elems[0])
+            driver.execute_script('arguments[0].scrollIntoView();', elems[0])
             time.sleep(WAIT)
             elems[0].click()
             time.sleep(WAIT)
-        driver.set_window_size(0, 0)
         html = driver.page_source.encode('utf-8')
         driver.quit()
         return html
 
     except Exception as e:
-        print('Seleniumにてエラー発生')
+        print('E: Seleniumにてエラー発生')
         print(e)
         driver.quit()
         return 0
 
 
 # --------------------------------------------------
-# 相対パス to 絶対パス
+# 絶対パスを相対パスに [入:相対パス, 実行ファイル側or展開フォルダ側 出:絶対パス]
 # --------------------------------------------------
-def resource_path(relative_path):
-    try:  # exeで実行時のパス
-        base_path = sys._MEIPASS
-    except Exception:  # ソースで実行した場合エラー発生
-        base_path = os.path.dirname(__file__)
-    return os.path.join(base_path, relative_path)
+def rel2abs_path(filename, attr):
+    if attr == 'temp':  # 展開先フォルダと同階層
+        datadir = os.path.dirname(__file__)
+    elif attr == 'exe':  # exeファイルと同階層の絶対パス
+        datadir = os.path.dirname(sys.argv[0])
+    else:
+        raise print(f'E: 相対パスの引数ミス [{attr}]')
+    return os.path.join(datadir, filename)
 
 
 # --------------------------------------------------
@@ -172,6 +171,9 @@ def interceptor(request):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print('E: ', e)
     print('終了しました')
     os.system('PAUSE')
